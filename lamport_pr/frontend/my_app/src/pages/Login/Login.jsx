@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import LoginIcon from "@mui/icons-material/Login";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { Snackbar, Alert } from "@mui/material";
+import { MD5, SHA1, SHA256, SHA512 } from "crypto-js";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -22,26 +23,44 @@ const Login = () => {
     if (passwordData !== "") {
       try {
         const apiResponse = await axios.post(
-          `${process.env.REACT_APP_API_ADDRESS}auth/login/`,
+          `http://localhost:8800/api/auth/getSessionId/`,
           {
             userName: userName,
-            password: passwordData,
           }
         );
         console.log(apiResponse);
-        localStorage.setItem(
-          "tokens",
-          JSON.stringify(apiResponse.data.accessToken)
+        const newPassword = hashPassword(
+          passwordData,
+          apiResponse.data.session - 1
         );
-        navigate("/mainPage");
-        // navigate("/mainPage", { state: { isTeacher } });
-        // err.data === "Wrong_Password_Username" ? setError(true) : setError(false);
+        console.log(newPassword);
+        const apiLoginResponse = await axios.post(
+          `http://localhost:8800/api/auth/login/`,
+          {
+            userName: apiResponse.data.userName,
+            password: newPassword,
+          }
+        );
+        console.log(apiLoginResponse);
+        if (apiLoginResponse.data.login_res == 1) {
+          navigate("/mainPage");
+        } else {
+          navigate("/createAccount");
+        }
       } catch (err) {
         console.log(err);
       }
     } else {
       setDataComplete(true);
     }
+  };
+
+  const hashPassword = (password, passNum) => {
+    let hashed = password;
+    for (let i = 0; i < passNum; i++) {
+      hashed = SHA256(hashed).toString();
+    }
+    return hashed;
   };
 
   return (
@@ -57,7 +76,7 @@ const Login = () => {
               }}
               required
             />
-            <span>Email</span>
+            <span>Username</span>
             <i></i>
           </div>
           <div className={classes.enterData}>

@@ -7,45 +7,51 @@ import { useNavigate } from "react-router-dom";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { Snackbar, Alert } from "@mui/material";
 import PasswordChecklist from "react-password-checklist";
+import { MD5, SHA1, SHA256, SHA512 } from "crypto-js";
 
 const CreateAccount = () => {
   const navigate = useNavigate();
 
   const [userNameData, setUserNameData] = useState("");
   const [passwordData, setPasswordData] = useState("");
-  const [repeatedPasswordData, setRepeatedPasswordData] = useState("");
 
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [dataComplete, setDataComplete] = useState(false);
 
   const manageRegister = async (e) => {
-    if (
-      password_validate(passwordData) &&
-      repeatedPasswordData === passwordData &&
-      userNameData !== ""
-    ) {
+    if (password_validate(passwordData) && userNameData !== "") {
       e.preventDefault();
       try {
+        const session = Math.floor(Math.random() * (100 - 50 + 1)) + 50;
+        const password = hashPassword(passwordData, session);
+        console.log(session);
+        console.log(password);
+
         const apiResponse = await axios.post(
-          `${process.env.REACT_APP_API_ADDRESS}auth/register/`,
+          `http://localhost:8800/api/auth/register/`,
           {
             username: userNameData,
-            password: passwordData,
+            password: password,
+            sessionNumber: session,
           }
         );
         console.log(apiResponse);
-        localStorage.setItem(
-          "tokens",
-          JSON.stringify(apiResponse.data.accessToken)
-        );
 
-        navigate("/mainPage");
+        // navigate("/mainPage");
       } catch (err) {
         console.log(err);
       }
     } else {
       setDataComplete(true);
     }
+  };
+
+  const hashPassword = (password, passNum) => {
+    let hashed = password;
+    for (let i = 0; i < passNum; i++) {
+      hashed = SHA256(hashed).toString();
+    }
+    return hashed;
   };
 
   const password_validate = (password) => {
@@ -88,24 +94,6 @@ const CreateAccount = () => {
               required
             />
             <span>Password</span>
-            <i></i>
-            <button
-              onClick={() => {
-                setPasswordVisible(!passwordVisible);
-              }}
-            >
-              {passwordVisible ? <Visibility /> : <VisibilityOff />}
-            </button>
-          </div>
-          <div className={classes.enterData}>
-            <input
-              type={passwordVisible ? "text" : "password"}
-              onChange={(value) => {
-                setRepeatedPasswordData(value.target.value);
-              }}
-              required
-            />
-            <span>Repeat your password</span>
             <i></i>
             <button
               onClick={() => {
